@@ -1,18 +1,14 @@
-time = 0:.001:5;
-n = length(time);
+time = 0:0.001:5;
+## n = length(time);
 
 frequency = [3 1 6 12];
 amplitude = [10 2 5 8];
 phase_angle = [0 pi/4 -pi pi/2];
+sinwave = @(a,f,p) a*sin(2*pi*f*time+p);
 
-swave = zeros(size(time));
-for i=1:length(amplitude)
-        swave = swave + amplitude(i)*sin(2*pi*frequency(i)*time+phase_angle(i));
-end
-        
-                                    
-
-clf
+swave = sum(cell2mat(arrayfun(sinwave,amplitude,frequency,phase_angle,"UniformOutput",false)'));
+size(swave)
+clf                             
 plot(time,swave)
 xlabel('Time (s)')
 ylabel('Amplitude')
