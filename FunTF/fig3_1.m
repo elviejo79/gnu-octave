@@ -1,12 +1,14 @@
-%"White noise refers to noise that has a flat power spectrum
-% the functions rand and randn produce data that can be considered white noise.
+## "White noise refers to noise that has a flat power spectrum
+## % the functions rand and randn produce data that can be considered white noise.
 1;
-
+x=[1:1000];
 Yu=rand(1000,1);
+length(Yu)
 Yn=randn(1000,1);
 
-subplot(211),hold on,
-plot(Yn), hold on, plot(Yu,'r')
+subplot(221)
+plot(Yn), hold on
+plot(Yu,'r')
 title('Random noise over time')
 
 subplot(223), hist(Yu,200)
