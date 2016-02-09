@@ -2,7 +2,9 @@
 ## // PINK NOISE noise with a non-uniform frequency structure.
 
 white_noise = randn(1000,1);
-wnX = fft(white_noise); ##fast fourier transfrom
+
+## fast fourier transfrom
+wnX = fft(white_noise); 
 pink_noise = real(ifft(wnX .* linspace(-1,1, length(wnX))'.^2))*2;
 
 clf;
