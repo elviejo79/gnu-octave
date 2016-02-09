@@ -312,7 +312,7 @@ function y = swave(amp,freq,phase,time)
 endfunction
 
 
-function y = num1()
+function result = ex1()
   time=0:.001:5;
   sinwave = swave(1,10,0,time);
 
@@ -343,84 +343,30 @@ function y = num1()
   plot(time,solution2)
   ylim([-1.5 5])
 
-  y=1;
 endfunction
 
 
-
-function y = num2()
+function result = ex2()
   time=0:.001:5;
   a = swave(1,1,0,time);
   b = swave(16,2,0,time);
   c = swave(32,4,0,time);
   clf
   plot(time,a.*b.*c)
-  y=2;
 endfunction
 
 
 
-function y = num3()
+function result = ex3()
   time=0:.001:5;
   a = swave(1,11,0,time);
   b = swave(1,17,0,time);
   c = swave(1,7,0,time);
   clf
   plot(time,a.*b.*c)
-  y=3;
 endfunction
 
 
-
-function result=fig3_1_random_noise()
-  ## "White noise refers to noise that has a flat power spectrum
-  ## % the functions rand and randn produce data that can be considered white noise.
-  1;
-  x=[1:1000];
-  Yu=rand(1000,1);
-  length(Yu)
-  Yn=randn(1000,1);
-
-  subplot(221)
-  plot(Yn), hold on
-  plot(Yu,'r')
-  title('Random noise over time')
-
-  subplot(223), hist(Yu,200)
-  title('Distribution of uniform noise')
-
-  subplot(224), hist(Yn,200)
-  title('Distribution of random noise')
-
-       % Pink noise refers to noise with a non-uniform frequency
-       % typically, that the power decreases with increasing frequency
-% One way to compute pink noise; is to apply a vanishing frequency filter.
-
-                                % wn = white noise
-  wn = randn(1000,1);
-  wnX = fft(wn);
-
-  pn = real(ifft(wnX .* linspace(-1,1,length(wnX))'.^2))*2;
-
-  subplot(221)
-  ## plot(wn), hold on
-  ## plot(pn,'r')
-  ## xlabel('Time (a.u.)')
-  ## ylabel('Amplitude (a.u.)')
-  ## legend({'white', 'pink'})
-
-  ## subplot(222)
-  ## plot(wn,pn,'.')
-  ## xlabel('Amplitude white noise')
-  ## ylabel('Amplitude pink noise')
-
-  ## subplot(212)
-  ## plot(abs(fft(wn))), hold on
-  ## plot(abs(fft(pn)), 'r')
-  ## legend({'white';'pink'})
-  ## xlabel('Frequency (a.u.)'),
-  ## ylabel('Apmlittude')
-endfunction
 
 
 function result =ex4()
@@ -437,4 +383,17 @@ function result =ex4()
   plot(t, normal(-2,0.5),"g"), hold on
   plot(t, normal(-2,0.5).+cumsum(0.03*stationary),"g")
   legend("Original","Orig+stationary+noise","Orig","Orig + non-stationary noise");
+endfunction
+
+function result=ex5()
+  t=[-5:.001:5];
+  ##sinc = @(f, t, m) if (t-m!=0) sin(2*pi*f*(t-m)./(t-m)) else 1 end;
+  sinc = @(t) (t==0).*(1) + ... # discontinuous functions http://www.alecjacobson.com/weblog/?p=1097
+              (t!=0).*(sin(pi*t)./(pi*t));
+  s1 = sinc(t);
+  s2 = sinc(t./2);
+  clf;
+  plot(t,s1), hold on
+  plot(t,s2,"r")
+  xlim([-10 10])
 endfunction
