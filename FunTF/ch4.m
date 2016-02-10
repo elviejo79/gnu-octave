@@ -266,3 +266,200 @@ function result = fig4_10()
   ylim([0 100])
   xlabel("Frequency (a.u.)")
 endfunction
+
+function result = fig4_11()
+  ## show the Fourier spectra of two sinusoidal responses with edge artifacts
+  srate=1000;
+  t=0:1/srate:10;
+  n=length(t);
+
+  x1 = sin(2*pi*2*t+pi/2);
+  x2 = sin(2*pi*2*t);
+
+  subplot(211)
+  title("4.11: Edge artifacts with cosine")
+  plot(t,x1), hold on
+  plot(t,x2,'r')
+  xlabel('Time')
+  ylabel('amplitude')
+
+  hz = linspace(0,srate/2,floor(n/2)+1);
+  x1X = fft(x1)/n;
+  x2X = fft(x2)/n;                         
+                         
+                        
+  subplot(212)
+  plot(hz,2*abs(x1X(1:length(hz))),'b.-'), hold on
+  plot(hz,2*abs(x2X(1:length(hz))),'r.-')
+  xlabel('Frequency (hz)')
+  ylabel('Amplitude')
+  xlim([0 10])
+  ylim([0 .001])
+
+  result = struct("srate",srate,
+                  "t",t,
+                  "n",n,
+                  "x1",x1,
+                  "x2",x2,
+                  "hz",hz,
+                  "x1X",x1X,
+                  "x2X",x2X);
+endfunction
+
+function result = fig4_12()
+  p = fig4_11();
+  ## A taper is a smooth envelope that dampens the time series
+  ## near the beginning and the end, thereby
+  ## effectively removig edge artifacts
+  ## there are may tapper; a Hann window will be shown here
+  hannwin = .5*(1-cos(2*pi*linspace(0,1,p.n)));
+
+  clf;
+  subplot(311), plot(p.t,p.x1)
+  title("4.12: Sine wave(top), taper(middle), and tapered sine wave")
+  subplot(312), plot(p.t,hannwin)
+  subplot(313), plot(p.t, p.x1 .* hannwin)
+  result = p;
+  result.hannwin = hannwin;
+endfunction
+
+function result = fig4_13()
+  ## applying the taper also atenuates valid signal.
+  ## this potential loss of signal must be balanced with the attenuation of artifacts introduced by edges.
+  edges = fig4_12();
+  clf;
+  
+  hz = edges.hz;
+  x1X = edges.x1X; # this were previously calculated in fig4_11()
+  x2X = fft(edges.x1.*edges.hannwin)/edges.n;
+
+  clf;
+  plot(hz,2*abs(x1X(1:length(hz)))), hold on
+  plot(hz,2*abs(x2X(1:length(hz))),'r')
+  xlim([0 10])
+  ylim([0 .002])
+  legend("original","tapered")
+  title("4.13: Tapered sine wave reducs edge artifacts")
+endfunction
+
+function result = fig4_14()
+  n=50;
+  x=(linspace(0,1,n)>.5)+0;
+  zeropadfactor = 2;
+
+  clf;
+  subplot(211)
+  plot(x)
+  title("4.14: Same FFT, different N")
+  ylim([-.1 1.1])
+  xlabel("time (a.u.)")
+
+  ## El patrón es:
+  ## sacas la transoframa de furier a esa le llamas spectral (X)
+  ## sacas los hz que va desde 0 hasta la mitad de los datos
+  ## usas 2*abs( de la espectral (desde 1 hasta los hz)) para saber la frecuencia
+  X1 = fft(x,n)/n;
+  hz1 = linspace(0, n/2, floor(n/2)+1);
+
+  subplot(212)
+  plot(hz1, 2*abs(X1(1:length(hz1))))
+
+  X2 = fft(x,zeropadfactor*n)/n;
+  hz2 = linspace(0, n/2, floor(zeropadfactor*n/2)+1);
+
+  hold on,
+  plot(hz2, 2*abs(X2(1:length(hz2))), 'r')
+  xlim([0 20])
+
+  xlabel("freq (a.u.)")
+  legend("50 point FFT", "100 point FFT")
+endfunction
+
+function result = fig4_15()
+  srate = 1000;
+  t=0:1/srate:1;
+  f=30;
+  srates = [15 20 50 200]; ## Hz
+
+  ## "continuas" sine wave
+  d = sinewave(1,f,t);
+
+  clf;
+  for i=1:4
+    subplot(2,2,i)
+    plot(t,d)
+    hold on
+    samples = round(1:srate/srates(i):length(t));
+    plot(t(samples),d(samples),'r-','linewidth',2)
+    legend(["sampling rate " num2str(srates(i))])
+  end
+  xlabel("time (s)")
+  ylabel("amplitude")
+  title("4.15: Subsampling produces aliasing")
+endfunction
+
+function results = fig4_16()
+  % Section 4.11 Repeated instruments
+  nTrials=40;
+  srate=1000;
+  t=0:1/srate:5;
+  n=length(t);
+  a=[2 3 4 2];
+  f=[1 3 6 12];
+  
+  data = sinewave(a', f',t);
+                                % create trials with noise
+  dataWnoise = bsxfun(@plus, data,30*randn(nTrials,n));
+
+  hz=linspace(0,srate/2,floor(n/2)+1);
+  dataPow = zeros(nTrials, length(hz));
+  hanwin = .5*(1-cos(2*pi*linspace(0,1,n)));
+
+  for triali=1:nTrials
+    temp = fft(hanwin.*dataWnoise(triali,:))/n;
+    dataPow(triali,:) = 2*abs(temp(1:length(hz)));
+  end
+
+  clf
+  subplot(211), plot(t, dataWnoise), hold on
+  plot(t, mean(dataWnoise), 'k')
+  subplot(212), plot(hz, dataPow), hold on
+  plot(hz, mean(dataPow), 'k', 'linewidth',5)
+  xlim([0 20]);
+  title("fig 4.16 Averaging improves results");
+
+  results=struct('dataPow',dataPow,'hz',hz);
+endfunction 
+
+function result = fig4_17()
+  ## Sect 4.12 | Signal to Noise ratio
+  p = fig4_16(); %previous excercise
+  snr = mean(detrend(p.dataPow')')./...
+        std(detrend(p.dataPow')');
+
+  clf
+  plot(p.hz,snr)
+  xlim([0 20])
+  title("Fig 4.17 |Empirical SNR (mean divided by standard deviation)")
+endfunction
+
+## I can' make the figu 5_18 because octave doesn't
+## hed dpss function.
+## maybe I'll try to implement it some day.
+
+function result = fig4_19()
+  ## Section 4.14 The Inverse Fourier transform
+  xTime = randn(20,1);
+  xFreq = fft(xTime)/length(xTime);
+  t = (0:length(xTime)-1)' / length(xTime);
+
+  recon_data = zeros(size(xTime));
+  for fi=1:length(xTime)
+    sin_wave = xFreq(fi)*exp(1i*2*pi*(fi-1).*t);
+    recon_data = recon_data + sin_wave;
+  end
+
+  plot(xTime, '.-'), hold on
+  plot(real(recon_data),'ro')
+  legend("Original data", "Inverse Fourier Transform")
+endfunction
