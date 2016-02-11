@@ -1,6 +1,5 @@
 1;
 
-
 function result=fig4_1()
   srate=1000;
   t=0:1/srate:10;
@@ -398,7 +397,11 @@ function result = fig4_15()
   title("4.15: Subsampling produces aliasing")
 endfunction
 
+function results = trials(nTrials, noise)
+endfunction
+
 function results = fig4_16()
+
   % Section 4.11 Repeated instruments
   nTrials=40;
   srate=1000;
@@ -458,8 +461,118 @@ function result = fig4_19()
     sin_wave = xFreq(fi)*exp(1i*2*pi*(fi-1).*t);
     recon_data = recon_data + sin_wave;
   end
-
+  
+  clf
   plot(xTime, '.-'), hold on
   plot(real(recon_data),'ro')
   legend("Original data", "Inverse Fourier Transform")
+endfunction
+
+function results=fig4_20()
+  ## basics
+  srate=1000;
+  t = 0:1/srate:6;
+  N = length(t);
+  f = [1 5]; % in Hz
+
+  ## In this excercise: a) generate a linear chirp and b) compute its inverse 
+  ## Generate a linear chirp
+  ff = linspace(f(1), f(2)*mean(f)/f(2),N);
+  data = sin(2*pi*t.*ff);
+  
+  ## secord, compute Fourier Transform
+  dataX = fft(data);
+
+  ## third, shuffle phases(here, shifted by 10)
+  phases = angle([dataX(10:end) dataX(1:9)]);
+  shuffdata = abs(dataX).*exp(1i*phases);
+
+  ## fourth, reconstruct the signal
+  newdata = ifft(shuffdata);
+
+  ## fifth, plot the results
+  subplot(211)
+  plot(t,data), hold on
+  plot(t,real(newdata),'r')
+  xlabel('time (s)')
+  ylabel('amplitude')
+  legend("original", "phase scrambled")
+  title("4.20| Same power, shuffeld phases")
+  
+  subplot(212)
+  hz = linspace(0, srate/2, floor(N/2)+1);
+  plot(hz, 2*abs(dataX(1:length(hz))/N), 'o'), hold on
+  plot(hz, 2*abs(shuffdata(1:length(hz))/N), 'r')
+  xlim([0 20])
+  xlabel('frequency (Hz)')
+  ylabel('amplitude')
+  legend("original", "phase scrambled")
+endfunction
+
+function result=trials(nTrials, noiseLevel)
+  srate=1000;
+  t=0:1/srate:5;
+  n=length(t);
+  a=[2 3 4 2];
+  f=[1 3 6 12];
+  data=sinewave(a', f',t);
+
+  ## create trials with noise
+  dataWnoise = bsxfun(@plus, data, noiseLevel*randn(nTrials,n));
+  hz = linspace(0, srate/2, floor(n/2)+1);
+  dataPow = zeros(nTrials, length(hz));
+
+  hanwin = .5*(1-cos(2*pi*linspace(0,1,n)));
+
+  for triali = 1:nTrials
+    temp = fft(hanwin.*dataWnoise(triali,:))/n;
+    dataPow(triali,:) = 2*abs(temp(1:length(hz)));
+  end
+
+  result = struct("t",t,"dataWnoise",dataWnoise,"hz",hz,"dataPow",dataPow);
+endfunction
+
+function result=fig4_21()
+  clf;
+  t1 = trials(10,10);
+  subplot(221), plot(t1.t, t1.dataWnoise), hold on, plot(t1.t, mean(t1.dataWnoise),'k'), title("10 trials, 10x noise")
+  subplot(223), plot(t1.hz, t1.dataPow), hold on, plot(t1.hz, mean(t1.dataPow),'k'), ylim([0 2]), xlim([0 20])
+  
+  t2 = trials(100,10);
+  subplot(222), plot(t2.t, t2.dataWnoise), hold on, plot(t2.t, mean(t2.dataWnoise),'k'), title("1000 trials, 10x noise")
+  subplot(224), plot(t2.hz, t2.dataPow), hold on, plot(t1.hz, mean(t2.dataPow),'k'), ylim([0 2]), xlim([0 20])
+endfunction
+
+function result=fig4_22()
+  srate=1000;
+  t=0:1/srate:2;
+  N=length(t);
+  
+  swave=sinewave(1,10,t);
+  swaveX = fft(swave,N)/N;
+  hz = linspace(0,srate/2,floor(N/2)+1);
+  power = 2*abs(swaveX(1:length(hz)));
+
+  clf
+  subplot(221)
+  bar(hz, power), title("Fig 4.22"), ylim([0 1]), xlim([5 15])
+
+  p = padder(2,N,srate,swave);
+  subplot(222), bar(p.Hz, p.Power), title(p.title), ylim([0 1]), xlim([5 15])
+
+  p = padder(3,N,srate,swave);
+  subplot(223), bar(p.Hz, p.Power), title(p.title), ylim([0 1]), xlim([5 15])
+
+  p = padder(1.5,N,srate,swave);
+  subplot(224), bar(p.Hz, p.Power), title(p.title), ylim([0 1]), xlim([5 15])
+  
+endfunction
+
+function results=padder(padding,N,srate,swave)
+  pSwaveX=fft(swave,padding*N)/(padding*N);
+  pHz = linspace(0,srate/2,floor(padding*N/2));
+  pPower = 2*abs(pSwaveX(1:length(pHz)));
+  results = struct("Hz",pHz,
+                   "Power",pPower,
+                   "title",num2str(padding*N));
 endfunction
