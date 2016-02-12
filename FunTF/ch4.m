@@ -168,19 +168,22 @@ endfunction
 
 function result=fig4_7()
   ## consider a sine wave with constant frequency but varying apmlitude
+  srate = 1000;
+  t=0:1/srate:5;
+  n=length(t);
   
   ## next consider a time series with varying amplitudes nad varying frequencies.
   a = [10 2 5 8];
   f = [3 1 6 12];
 
-  tchunks = vec2mat(t,floor(n/length(a))+1);
-  
-  swave=[];
-  for i=1:length(a)
-    swave=[swave sinewave(a(i),f(i),tchunks(i,:))];
-  end
-  swave=swave(1:n);
+  tchunks = round(linspace(1,n,length(a)+1));
 
+  swave = 0;
+  for i=1:length(a)
+    swave = cat(2,swave,...
+                a(i)*sin(2*pi*f(i)*t(tchunks(i):tchunks(i+1)-1)));
+  end
+  
   swaveX = fft(swave)/n;
   hz = linspace(0,srate/2,floor(n/2)+1);
   
@@ -554,25 +557,17 @@ function result=fig4_22()
   power = 2*abs(swaveX(1:length(hz)));
 
   clf
-  subplot(221)
-  bar(hz, power), title("Fig 4.22"), ylim([0 1]), xlim([5 15])
-
-  p = padder(2,N,srate,swave);
-  subplot(222), bar(p.Hz, p.Power), title(p.title), ylim([0 1]), xlim([5 15])
-
-  p = padder(3,N,srate,swave);
-  subplot(223), bar(p.Hz, p.Power), title(p.title), ylim([0 1]), xlim([5 15])
-
-  p = padder(1.5,N,srate,swave);
-  subplot(224), bar(p.Hz, p.Power), title(p.title), ylim([0 1]), xlim([5 15])
-  
+  ## subplot(221)
+  ## bar(hz, power), title("Fig 4.22"), ylim([0 1]), xlim([5 15])
+  subplot(221), padder(1,N,srate,swave);
+  subplot(222), padder(2,N,srate,swave);
+  subplot(223), padder(3,N,srate,swave);
+  subplot(224), padder(1.5,N, srate,swave);  
 endfunction
 
 function results=padder(padding,N,srate,swave)
   pSwaveX=fft(swave,padding*N)/(padding*N);
   pHz = linspace(0,srate/2,floor(padding*N/2));
   pPower = 2*abs(pSwaveX(1:length(pHz)));
-  results = struct("Hz",pHz,
-                   "Power",pPower,
-                   "title",num2str(padding*N));
+  bar(pHz, pPower), title(["NFFT " num2str(padding*N)]), ylim([0 1]), xlim([5 15])
 endfunction
