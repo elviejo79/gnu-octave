@@ -95,7 +95,7 @@ function fig6_6()
   title("Fig 6.6|Convolution result with appropriate amplitude scalling")
 endfunction
 
-function [t frex tf] = fig6_7()
+function [t chirpTS wtime halfwavL Lconv frex tf chirpTSX] = fig6_7()
   [t chirpTS wtime halfwavL cmw Lconv]= fig6_5();
   nfrex = 30;
   frex = logspace(log10(2), log10(30), nfrex);
@@ -118,6 +118,7 @@ function [t frex tf] = fig6_7()
   subplot(212)
   contourf(t,frex,tf,40,'linecolor','none')
   xlabel("time (s)")
+
   ylabel("Frequency (Hz)")
   title("Fig 6.7| Result of convolution between a family of complex morlet waves and a 2-8chirp")
 endfunction
@@ -137,5 +138,148 @@ function fig6_8()
   plot(t,tf(f2plot,:)), hold on
   plot(t(t2plot), tf(f2plot, t2plot), 'ro-');
   legend("original", "down-sampled");
-  title("Fig 6.8| temporally downsampling results is ofteng a good idea")
+  title("Fig 6.8| temporally downsampling results is often a good idea")
 end
+
+function fig6_9()
+  ## Section 6.7 When the Number of CYCles (ncyc) is largerd the gausisian is wider..
+  [t chirpTS wtime halfwavL Lconv frex tf chirpTSX] = fig6_7();
+  freq2use = 5;
+
+  ## Width the la complex Morlet Wavelet
+  ncyc = 7;
+  w = 2*(ncyc/(2*pi*freq2use))^2;
+                                # Complex Morlet Wavelet
+  cmw7 = exp(1i*2*pi*freq2use.*wtime).* exp((-wtime.^2)/w);
+  convres = ifft(chirpTSX.*fft(cmw7,Lconv));
+  pow7 = abs(chop_edges(convres,halfwavL));
+
+  ncyc=3;
+  w = 2*(ncyc/(2*pi*freq2use))^2;
+                                # Complex Morlet Wavelet 3 num of cycles
+  cmw3 = exp(1i*2*pi*freq2use.*wtime).*exp((-wtime.^2)/w);
+  convres = ifft(chirpTSX.*fft(cmw3,Lconv));
+  pow3 = abs(chop_edges(convres,halfwavL));
+
+  clf
+  subplot(221)
+  plot(wtime,real(cmw7)), hold on
+  plot(wtime,real(cmw3), 'r')
+  title("two morlet wavelets with Gaussian widths 3 and 7")
+  legend("7 gaussian width", "3 gaussian width")
+  xlabel("wtime (s)")
+
+                                #duplicating sampling rate here.
+                                #becaus I don't want to change the calls
+  srate=1000;
+  subplot(222)
+  hz = linspace(0, srate/2, floor(length(wtime)/+1));
+  x7 = 2*abs(fft(cmw7)); # what is going on here?
+  x3 = 2*abs(fft(cmw3));
+  plot(hz,x7(1:length(hz))), hold on
+  plot(hz,x3(1:length(hz)), 'r')
+  xlim([0 20])
+  title("power spectra")
+  legend("7 gaussian width", "3 gaussian width")
+  xlabel("Frequency in (hz)")
+
+  subplot(212)
+  plot(t,pow7), hold on
+  plot(t,pow3,'r')
+  title("Fig 6.9 Convolution with the chirp")
+  legend("7 gaussian width", "3 gaussian width")
+  xlabel("time (s) of the chirp" )
+  
+                                 
+endfunction
+
+function fig6_10()
+  [t chirpTS wtime halfwavL Lconv frex tf chirpTSX] = fig6_7();
+
+  ## allo Number of CYCles to vary over a range as a function of crequency.
+  nfrex=9;
+  frex = logspace(log10(2), log10(20), nfrex);
+  ncyc = logspace(log10(3), log10(12), nfrex);
+
+  cmw_fam= zeros(nfrex, length(wtime));
+  for fi=1:nfrex
+    w = 2*(ncyc(fi) / (2*pi*frex(fi)))^2;
+    cmw_fam(fi,:) = exp(1i*2*pi*frex(fi).*wtime).*exp((-wtime.^2)/w);
+  end
+
+  for i=1:9
+    subplot(3,3,i)
+    plot(wtime,(real(cmw_fam(i,:))))
+    xlim([-1 1])
+    title(["freq ", num2str(frex(i)), " Hz", "Num of Cycles", num2str(ncyc(i))])
+  end
+endfunction
+
+function fig6_11()
+  srate=1000;
+  t=0:1/srate:6;
+
+                                # create signal
+  f = [6 14 25 40 70];
+                                # note the widely varying amplitudes
+  a=[.001234 1.234 1234 123400 12340000];
+                                # relevant amplitue modulations
+  m=[-.1 .1 -.2 .2 -.3];
+  signal = zeros(size(t));
+
+  for i=1:length(f)
+                                #compute 'base' signal
+    signal = signal+a(i).*sin(2*pi*f(i).*t);
+                                #compute time-limited modulation
+    extrasignal= m(i)*a(i)*sin(2*pi*f(i).*t) .* exp(-(t-2).^2);
+    signal = signal + extrasignal;
+  end
+
+  ## tf=zeros(length(f),length(t)); 
+  for i=1:length(f)
+    [convres pow] = convolution_resolution(f(i),signal,srate);
+    tf(i,:)=pow;
+  end
+
+  ## plot the non-dB-normalized result
+  subplot(121)
+  plot(t, tf)
+  xlabel("Time (s)"), ylabel("Amplitude (raw")
+  title("Non-normalized amplitude")
+
+  ## compute db relativo to baseline
+  bidx=dsearchn(t',[2 4]');
+  baseMean=mean(tf(:,bidx(1):bidx(2)),2);
+  db=10*log10(bsxfun(@rdivide, tf, baseMean));
+  
+  ## convert to dB and plot again
+  subplot(122)
+  plot(t,db);
+  ylim([-2 2])
+  xlabel('Time (s)'), ylabel('Amplitude (dB)')
+  title('dB-normalized amplitude')
+
+endfunction
+
+function [convres pow] = convolution_resolution(f,signal,srate)
+                          #signalX is the spectra of signal
+                          #which means the fourier transform of signal
+
+  t=0:length(signal)-1;
+  wavelet_time    = -2:1/srate:2;
+  Lconv       = length(t)+length(wavelet_time)-1;
+  halfwavsize = floor(length(wavelet_time)/2);
+  Lconv = length(t)+length(wavelet_time)-1;
+  ncyc = 10;
+  wavelet_width = 2*(ncyc/(2*pi*f))^2;
+                                # Complex Morlet Wavelet
+  cmw = exp(1i*2*pi*f.*wavelet_time).* exp((-wavelet_time.^2)/wavelet_width);
+  cmwX=fft(cmw,Lconv);
+                                #normalizing the convolution
+  cmwX = cmwX./max(cmwX); 
+
+  signalX     = fft(signal,Lconv);
+  convres = ifft(signalX.*cmwX);
+  pow = 2*abs(chop_edges(convres,halfwavsize));
+
+endfunction
