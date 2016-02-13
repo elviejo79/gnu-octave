@@ -283,3 +283,53 @@ function [convres pow] = convolution_resolution(f,signal,srate)
   pow = 2*abs(chop_edges(convres,halfwavsize));
 
 endfunction
+
+function fig6_12()
+  ##First generate 20 repeated ea
+  wanted_signals=20;
+  signal_gen = @(f,t,phase) sin(2*pi*f.*t+phase');
+  phases=2*pi*rand(wanted_signals);
+  srate=1000;
+  t=0:1/srate:6;
+
+  ## First, generate 20 repeated measurements ("trials" of atime series
+  for i=1:length(phases)
+    signals(i,:)=signal_gen(1,t,phases(i));
+  end
+
+  clf
+  subplot(221)
+  plot(t,signals);
+  ylim([-1 1])
+  title("a) all trials")
+
+  ## Second Perform the convolution on each trial separately
+  for i=1:length(phases)
+    [convres pow] = convolution_resolution(1,signals(i,:),srate);
+    pows(i,:) = pow;
+  end
+
+
+  subplot(222)
+  plot(t,mean(pows))
+  title("trial average response")
+  ylim([-1 1])
+
+  subplot(223)
+  plot(t,pows)
+  title("power all trials")
+  ylim([-1 1])
+
+  
+  ##Third, compute another trial-averaged time series
+  ## first average the time series over the trials in the time domain
+  ## and then perform convolution
+  subplot(224)
+  [convres pow_of_mean] = convolution_resolution(1,mean(signals),srate);
+  plot(t,pow_of_mean)
+  ylim([-1 1])
+  title("power from the trial average")
+
+  
+
+endfunction
