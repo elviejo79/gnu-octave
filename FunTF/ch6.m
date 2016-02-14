@@ -329,7 +329,70 @@ function fig6_12()
   plot(t,pow_of_mean)
   ylim([-1 1])
   title("power from the trial average")
+endfunction
 
+function fig6_12book()
   
+                #the time series will have two overlapping sine waves,
+                #one iwth increasing power
+                #and one with decreasing power
+  
+  srate=1000;
+  time=0:1/srate:6;
+  sinfreqs=[5 11];
+  numTrials=20;
+  wtime=-2:1/srate:2;
+  nfrex=9;
+  frex=logspace(log10(2),log10(30),nfrex);
+  ncyc=logspace(log10(3),log10(12),nfrex);
+  Lconv=length(time)+length(wtime)-1;
+  halfwavl=floor(length(wtime)/2);
 
+                                #initilize matrices
+  signal = zeros(numTrials, length(time));
+  tf = zeros(2,nfrex,length(time));
+
+                                # first create the signal
+  ampInc = linspace(0,1,length(time));
+  ampDec = linspace(1,0,length(time));
+
+  for ti=1:numTrials
+    sine1 = ampInc.*sin(2*pi*sinfreqs(1)*time + rand*2*pi);
+    sine2 = ampDec.*sin(2*pi*sinfreqs(2)*time + rand*2*pi);
+    signal(ti,:) = sine1 + sine2;
+  end
+
+                                #second, time-frequency decomposition
+  signalX1 = fft(signal,Lconv,2); # why this 2??
+  signalX2 = fft(mean(signal),Lconv);
+
+  for fi=1:nfrex
+                                #create wavelet
+    w = 2*(ncyc(fi)/2*pi*frex(fi))^2;
+    cmwX = fft(exp(1i*2*pi*frex(fi).*wtime)...
+               .* exp((-wtime.^2)/w), Lconv);
+    cmwX = cmwX./max(cmwX);
+
+                                # allows simultaneos convolution
+    convres = ifft(bsxfun(@times,signalX1,cmwX), [],2);
+    temppower = 2*abs(convres(:,halfwavl:end-halfwavl-1));
+    tf(1,fi,:)=mean(temppower,1);
+
+                                # convolotuion of trial avg
+    convres=ifft(signalX2.*cmwX);
+    tf(2,fi,:)=2*abs(convres(:,halfwavl:end-halfwavl-1));
+  end
+
+  clf;
+  subplot(221)
+  plot(time,signal)
+
+  subplot(222)
+  plot(time,mean(signal))
+  
+  subplot(223)
+  contourf(time, frex, squeeze(tf(1,:,:)), 40,'linecolor','none');
+
+  subplot(224)
+  contourf(time, frex, squeeze(tf(2,:,:)), 40, 'linecolor','none');
 endfunction
