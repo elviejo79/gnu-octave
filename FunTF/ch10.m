@@ -128,7 +128,63 @@ function fig10_5()
   title("fig 10.6 | Comparision of median filters")
 endfunction
 
-
-function latest()
-  fig10_5();
+function fig10_7()
+  x=1:20;
+  y=2*x+randn(size(x));
+  p=polyfit(x,y,1);
+  
+  clf;
+  plot(x,y,'o-'), hold on
+  plot(x,p(2)+p(1)*x, 'r*-');
+  legend("original","Denoised with polynomials")
+  title("10.7 | Part 1. Denoising with polynomials");
 endfunction
+
+function fig10_8()
+  srate=1000;
+  t=0:1/srate:5;
+  signal=interp1(0:5,randn(6,1),t,'spline');
+  noise=3*randn(size(t));
+  data = signal+noise;
+
+  polyorder = 6;
+  p = polyfit(t,data,polyorder);
+  dataPolyFit = polyval(p,t);
+
+  clf;
+  subplot(211), plot(t,data), legend("signal with noise")
+  subplot(212), plot(t,dataPolyFit), hold on
+  plot(t, signal, 'r')
+  legend("Denoised","signal")
+  title("fig 10.8| Part 2. Denoising with polynomials")
+endfunction
+
+function fig10_9()
+              # denoising more than one dimension
+              # Octave comes with several built-in images and datasets
+  clear;
+  image
+  signal = get(findobj(gcf,'type','image'), 'CData');
+  data = signal+1000*reshape(isprime(1:numel(signal)), size(signal));
+  
+  d=1;
+  thresh = 2*std(data(:))+median(data(:));
+  dataMed = data;
+  for i=d+1:size(data,1)-d-1
+    for j = d+1:size(data,2)-d-1
+      if data(i,j)>thresh
+        temp = data(i-d:i+d,j-d:j+d);
+        dataMed(i,j) = median(temp(:));
+      end
+    end
+  end
+
+  clf
+  subplot(131), imagesc(signal), set(gca, 'clim',[3 300]), axis image
+  subplot(132), imagesc(data), set(gca, 'clim',[3 300]), axis image
+  subplot(133), imagesc(dataMed), set(gca,'clim',[3 300]), axis image
+  title("10.9|threshold based median filter, in 2D")
+  
+endfunction
+
+
